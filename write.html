@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>记事卡片</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* 全局样式重置 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background-color: #f5f5f5;
+      padding-bottom: 80px;
+      min-height: 100vh;
+    }
+    
+    /* 顶部空白区域 */
+    .header {
+      height: 10px;
+    }
+    
+    /* 内容区域 - 网格布局 */
+    .content-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 10px;
+    }
+    
+    /* 网格布局（类似工具集） */
+    .notes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    
+    /* 空状态提示 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+      grid-column: 1 / -1; /* 占满整行 */
+    }
+    
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #ddd;
+    }
+    
+    .empty-state p {
+      font-size: 16px;
+    }
+    
+    /* 记事卡片样式 - 网格卡片 */
+    .note-card {
+      background-color: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      position: relative;
+      transition: all 0.2s;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    
+    .note-card:hover {
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* 卡片内容 */
+    .note-content {
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 15px;
+      color: #333;
+      flex-grow: 1;
+      margin-bottom: 12px;
+    }
+    
+    /* 卡片底部（只有删除按钮） */
+    .note-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid #f0f0f0;
+    }
+    
+    /* 删除按钮 */
+    .delete-btn {
+      color: #ff4d4f;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+      border: none;
+      background: none;
+    }
+    
+    .delete-btn:hover {
+      background-color: #fff5f5;
+    }
+    
+    /* 右下角加号按钮 - 简化版 */
+    .add-button {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: #4a90e2;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      z-index: 1000;
+      border: none;
+      cursor: pointer;
+    }
+    
+    /* 遮罩层 */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 100;
+    }
+    
+    .overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    /* 添加记事弹出框 */
+    .add-note-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 400px;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 110;
+    }
+    
+    .add-note-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .add-note-modal textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      min-height: 120px;
+      resize: none;
+      margin-bottom: 15px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    
+    .add-note-modal textarea:focus {
+      border-color: #4a90e2;
+      outline: none;
+    }
+    
+    /* 弹出框按钮 */
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .cancel-btn, .add-btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .cancel-btn {
+      border: 1px solid #ddd;
+      background-color: white;
+      color: #333;
+    }
+    
+    .add-btn {
+      background-color: #4a90e2;
+      color: white;
+    }
+    
+    .add-btn:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    
+    /* 确认对话框 */
+    .confirm-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 300px;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 120;
+    }
+    
+    .confirm-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .confirm-message {
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+    
+    .confirm-actions {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .confirm-btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .confirm-cancel {
+      border: 1px solid #ddd;
+      background-color: white;
+      color: #333;
+    }
+    
+    .confirm-delete {
+      background-color: #ff4d4f;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部空白区域 -->
+  <div class="header"></div>
+
+  <!-- 内容区域 - 网格布局 -->
+  <div class="content-wrapper">
+    <div class="notes-grid" id="notes-grid">
+      <!-- 空状态提示 -->
+      <div class="empty-state" id="empty-state">
+        <i class="far fa-sticky-note"></i>
+        <p>点击右下角按钮添加记事</p>
+      </div>
+      <!-- 记事卡片会在这里动态生成 -->
+    </div>
+  </div>
+  
+  <!-- 右下角加号按钮 -->
+  <button class="add-button" id="add-button">
+    <i class="fas fa-plus"></i>
+  </button>
+  
+  <!-- 遮罩层 -->
+  <div class="overlay" id="overlay"></div>
+  
+  <!-- 添加记事弹出框 -->
+  <div class="add-note-modal" id="add-note-modal">
+    <textarea 
+      id="note-textarea" 
+      placeholder="写下你想记录的内容..."
+      maxlength="500"
+    ></textarea>
+    <div class="modal-actions">
+      <button class="cancel-btn" id="cancel-btn">取消</button>
+      <button class="add-btn" id="add-btn" disabled>添加</button>
+    </div>
+  </div>
+  
+  <!-- 删除确认框 -->
+  <div class="confirm-modal" id="confirm-modal">
+    <div class="confirm-message" id="confirm-message">确定要删除吗？</div>
+    <div class="confirm-actions">
+      <button class="confirm-btn confirm-cancel" id="confirm-cancel">取消</button>
+      <button class="confirm-btn confirm-delete" id="confirm-delete">删除</button>
+    </div>
+  </div>
+
+  <script>
+    // 数据管理模块
+    const DataManager = {
+      STORAGE_KEY: 'notes_grid_data',
+      
+      init() {
+        const data = this.load();
+        if (!data) {
+          this.save({ notes: [] });
+        }
+      },
+      
+      load() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+      },
+      
+      save(data) {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+      },
+      
+      getNotes() {
+        const data = this.load();
+        return data ? data.notes : [];
+      },
+      
+      addNote(content) {
+        const data = this.load();
+        const note = {
+          id: Date.now().toString(),
+          content: content
+        };
+        
+        data.notes.unshift(note); // 新内容添加到最前面
+        this.save(data);
+        return note;
+      },
+      
+      deleteNote(noteId) {
+        const data = this.load();
+        data.notes = data.notes.filter(note => note.id !== noteId);
+        this.save(data);
+        
+        // 自动清理存储空间
+        if (data.notes.length === 0) {
+          localStorage.removeItem(this.STORAGE_KEY);
+        }
+      }
+    };
+    
+    // 确认对话框模块
+    const ConfirmDialog = {
+      modal: document.getElementById('confirm-modal'),
+      messageEl: document.getElementById('confirm-message'),
+      confirmBtn: document.getElementById('confirm-delete'),
+      cancelBtn: document.getElementById('confirm-cancel'),
+      resolveCallback: null,
+      
+      show(message) {
+        this.messageEl.textContent = message;
+        this.modal.classList.add('active');
+        document.getElementById('overlay').classList.add('active');
+        
+        return new Promise((resolve) => {
+          this.resolveCallback = resolve;
+        });
+      },
+      
+      hide() {
+        this.modal.classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
+        this.resolveCallback = null;
+      },
+      
+      init() {
+        this.confirmBtn.addEventListener('click', () => {
+          this.resolveCallback(true);
+          this.hide();
+        });
+        
+        this.cancelBtn.addEventListener('click', () => {
+          this.resolveCallback(false);
+          this.hide();
+        });
+        
+        // 点击遮罩层也取消
+        document.getElementById('overlay').addEventListener('click', () => {
+          if (this.modal.classList.contains('active')) {
+            this.resolveCallback(false);
+            this.hide();
+          }
+        });
+      }
+    };
+    
+    // 渲染所有记事（网格布局）
+    function renderNotes() {
+      const notesGrid = document.getElementById('notes-grid');
+      const emptyState = document.getElementById('empty-state');
+      const notes = DataManager.getNotes();
+      
+      // 清空现有卡片（但保留空状态提示）
+      const existingNotes = notesGrid.querySelectorAll('.note-card');
+      existingNotes.forEach(note => note.remove());
+      
+      // 显示或隐藏空状态提示
+      emptyState.style.display = notes.length === 0 ? 'block' : 'none';
+      
+      // 渲染每条记事（按添加顺序，新添加的在前）
+      notes.forEach(note => {
+        renderNote(note);
+      });
+    }
+    
+    // 渲染单条记事
+    function renderNote(note) {
+      const notesGrid = document.getElementById('notes-grid');
+      const emptyState = document.getElementById('empty-state');
+      
+      const noteElement = document.createElement('div');
+      noteElement.className = 'note-card';
+      noteElement.setAttribute('data-id', note.id);
+      
+      noteElement.innerHTML = `
+        <div class="note-content">${note.content}</div>
+        <div class="note-footer">
+          <button class="delete-btn" data-id="${note.id}">
+            <i class="fas fa-trash-alt"></i> 删除
+          </button>
+        </div>
+      `;
+      
+      // 插入到空状态提示之前
+      notesGrid.insertBefore(noteElement, emptyState);
+      
+      // 绑定删除事件
+      const deleteBtn = noteElement.querySelector('.delete-btn');
+      deleteBtn.addEventListener('click', function() {
+        const noteId = this.getAttribute('data-id');
+        deleteNote(noteId);
+      });
+    }
+    
+    // 删除记事（使用确认对话框）
+    async function deleteNote(noteId) {
+      const confirmDelete = await ConfirmDialog.show('确定要删除这条记事吗？');
+      if (confirmDelete) {
+        DataManager.deleteNote(noteId);
+        
+        // 找到对应的DOM元素
+        const noteElement = document.querySelector(`.note-card[data-id="${noteId}"]`);
+        if (noteElement) {
+          noteElement.remove();
+          renderNotes(); // 重新渲染以更新空状态
+        }
+      }
+    }
+    
+    // 添加记事
+    function addNote(content) {
+      if (!content.trim()) return;
+      
+      DataManager.addNote(content.trim());
+      renderNotes();
+    }
+    
+    // 弹出框控制
+    function toggleModal() {
+      const modal = document.getElementById('add-note-modal');
+      const overlay = document.getElementById('overlay');
+      const textarea = document.getElementById('note-textarea');
+      const addBtn = document.getElementById('add-btn');
+      
+      modal.classList.toggle('active');
+      overlay.classList.toggle('active');
+      
+      if (modal.classList.contains('active')) {
+        textarea.focus();
+      } else {
+        textarea.value = '';
+        addBtn.disabled = true;
+      }
+    }
+    
+    // 初始化应用
+    function init() {
+      DataManager.init();
+      ConfirmDialog.init();
+      renderNotes();
+      
+      // 获取DOM元素
+      const addButton = document.getElementById('add-button');
+      const cancelBtn = document.getElementById('cancel-btn');
+      const addBtn = document.getElementById('add-btn');
+      const textarea = document.getElementById('note-textarea');
+      const overlay = document.getElementById('overlay');
+      
+      // 事件监听器
+      addButton.addEventListener('click', toggleModal);
+      cancelBtn.addEventListener('click', toggleModal);
+      overlay.addEventListener('click', toggleModal);
+      
+      // 文本输入监听
+      textarea.addEventListener('input', function() {
+        addBtn.disabled = !this.value.trim();
+      });
+      
+      // 回车键提交
+      textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!addBtn.disabled) {
+            addBtn.click();
+          }
+        }
+      });
+      
+      // 添加按钮点击
+      addBtn.addEventListener('click', function() {
+        const content = textarea.value.trim();
+        if (content) {
+          addNote(content);
+          toggleModal();
+        }
+      });
+    }
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
