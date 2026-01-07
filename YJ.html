@@ -381,9 +381,9 @@
                 
                 // 单资产目标金额
                 const targetAmount = (totalInvest * targetNum / 100);
-                // 实际占比（相对于单资产目标）
-                const actualRatio = targetAmount === 0 ? 0 : (assetVal / targetAmount * 100).toFixed(2);
-                // 偏离金额
+                // 实际占比（修改为：单一资产市值占总投资金额的比例）
+                const actualRatio = totalInvest === 0 ? 0 : (assetVal / totalInvest * 100).toFixed(2);
+                // 偏离金额（相对于目标金额）
                 const deviationAmount = assetVal - targetAmount;
 
                 // 更新基础信息
