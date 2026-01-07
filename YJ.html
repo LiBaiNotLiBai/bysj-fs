@@ -16,6 +16,7 @@
             margin: 20px auto;
             padding: 20px;
             background: #f5f5f5;
+            position: relative;
         }
         .container {
             background: white;
@@ -24,6 +25,33 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow-x: auto;
             min-width: 320px;
+        }
+        /* 刷新按钮样式 */
+        .refresh-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        .refresh-btn:hover {
+            background: #45a049;
+            transform: rotate(90deg);
+        }
+        .refresh-btn:active {
+            transform: rotate(180deg);
         }
         /* 可编辑标题样式 */
         .editable-title {
@@ -149,6 +177,9 @@
     </style>
 </head>
 <body>
+    <!-- 刷新按钮 -->
+    <button class="refresh-btn" onclick="refreshPage()" title="刷新页面">↻</button>
+    
     <div class="container">
         <!-- 可编辑标题 -->
         <div class="title-wrap">
@@ -242,6 +273,15 @@
     </div>
 
     <script>
+        // 刷新页面函数
+        function refreshPage() {
+            // 可选：先清除本地缓存（如果需要的话）
+            // localStorage.clear();
+            
+            // 刷新页面
+            window.location.reload();
+        }
+
         // 初始化目标阈值（基于目标比例的±25%）
         function getTargetThresholds(targetPercent) {
             // 处理空值或非数字值
